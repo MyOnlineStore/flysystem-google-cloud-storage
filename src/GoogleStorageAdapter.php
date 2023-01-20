@@ -359,12 +359,25 @@ class GoogleStorageAdapter extends AbstractAdapter
     public function listContents($directory = '', $recursive = false)
     {
         $directory = $this->applyPathPrefix($directory);
+        $options = ['prefix' => $directory];
 
-        $objects = $this->bucket->objects(['prefix' => $directory]);
+        if (false === $recursive) {
+            $options += ['delimiter' => '/'];
+        }
+
+        $objects = $this->bucket->objects($options);
 
         $normalised = [];
         foreach ($objects as $object) {
             $normalised[] = $this->normaliseObject($object);
+        }
+
+        if (false === $recursive) {
+            foreach ($objects->prefixes() as $prefix) {
+                $normalised[] = Util::pathinfo($prefix) + ['type' => 'dir'];
+            }
+
+            return $normalised;
         }
 
         return Util::emulateDirectories($normalised);
